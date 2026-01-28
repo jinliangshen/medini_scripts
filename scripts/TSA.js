@@ -36,8 +36,12 @@ function toJsStr(javaStr) { return String(javaStr || '').trim(); }
 
 function getCellValue(workSheet,RowIndex,ColumnIndex){
 	
-	var cellRxCx = workSheet.getRow(RowIndex).getCell(ColumnIndex);
-
+	var row = workSheet.getRow(RowIndex);
+	if (row !== null && row != undefined) {
+		var cellRxCx = row.getCell(ColumnIndex);
+	} else {
+		cellRxCx = null;
+	}
 	toJsStr(cellRxCx);
 
 	// console.log("the row is {0} and the column is {1}, and the cell is {2}",RowIndex,ColumnIndex,cellRxCx);
@@ -202,6 +206,9 @@ function main(){
 				var dimWorkSheet = workSheetTSA.getDimension();
 				var rowNumWorkSheet = dimWorkSheet.getBottomRight().row;
 				var columnNumWorkSheet = dimWorkSheet.getBottomRight().column;
+
+				console.log("the row number of the sheet is {0}", rowNumWorkSheet);
+
 				if (rowNumWorkSheet < 2 || columnNumWorkSheet < 11){
 					throw "The format of the TSA is wrong. pls check it.";
 				}
