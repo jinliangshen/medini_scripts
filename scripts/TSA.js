@@ -45,13 +45,12 @@ function getCellValue(workSheet,RowIndex,ColumnIndex){
 	toJsStr(cellRxCx);
 
 	// console.log("the row is {0} and the column is {1}, and the cell is {2}",RowIndex,ColumnIndex,cellRxCx);
-	if (toJsStr(cellRxCx) == "null"){
+	if (toJsStr(cellRxCx) === "null"){
 		cellRxCx = "";
 	} 
 	else{
 		cellRxCx = toJsStr(cellRxCx);
 	}
-
 	// var cellRxCx = workSheet.getRow(RowIndex).getCell(ColumnIndex).toString().trim();
 
 	return cellRxCx;
@@ -96,7 +95,7 @@ function createPort(targetPart,portInformation,sourcePart){
 			break;
 	}
 	// get the failure mode for the port
-	console.log(portInformation.FM);
+	// console.log(portInformation.FM);
 	if (portInformation.FM){
 		var failurModes = portInformation.FM.split(";");
 		if (failurModes.length){
@@ -105,7 +104,11 @@ function createPort(targetPart,portInformation,sourcePart){
 		}
 	}
 	// configure the connector
-	Factory.createRelation(mediniNewPorts,sourcePart,Metamodel.sysml.SysMLConnector);
+	if (sourcePart) {
+		sourcePart.map(function(ele) {
+			Factory.createRelation(mediniNewPorts,ele,Metamodel.sysml.SysMLConnector);
+		});
+	}
 }
 
 function createFunction(targetPart,functionInformation){
@@ -187,7 +190,17 @@ function modifyFunction(portSourceName,portTargetName,targetPart){
 			alert("The port " + portSourceName + " is not exist in the part " + targetPart.name + ".");
 		}
 }
-
+function getSourcePart (workSheet,indexNum,sourcePartColumn){
+	var sourceParts = [];
+	var cellSource = getCellValue(workSheet,indexNum,sourcePartColumn);
+	if (cellSource){
+		var cellSourceParts = cellSource.split(",");
+		if (cellSourceParts){
+			cellSourceParts.map(function(ele) { sourceParts.push(ele.trim());});
+		}
+	}
+	return sourceParts;
+}
 function main(){
 	{
 		// find the system safety arcs package
@@ -215,7 +228,7 @@ function main(){
 				else{
 					// analyze the excel-data
 					var partsTSA = [];
-					var partsSourceTSA = [];
+					var partsSrcTSA = [];
 					var portPropertys = [];
 					var partsTSAColumnIndex = 1;
 					var portNameTSAColumnIndex = 2;
@@ -229,7 +242,7 @@ function main(){
 					var taskTSAColumnIndex = 11;
 					for (var indexParts = 2; indexParts < rowNumWorkSheet + 1; indexParts++){
 						partsTSA.push(getCellValue(workSheetTSA,indexParts,partsTSAColumnIndex));
-						partsSourceTSA.push(getCellValue(workSheetTSA,indexParts,sourcePartTSAColumnIndex));
+						partsSrcTSA.push(getSourcePart(workSheetTSA,indexParts,sourcePartTSAColumnIndex));
 						var portProperty = {
 							"PortName" 		: getCellValue(workSheetTSA,indexParts,portNameTSAColumnIndex),		
 							"ModifyName" 	: getCellValue(workSheetTSA,indexParts,modifyNameTSAColumnIndex),					
@@ -237,7 +250,7 @@ function main(){
 							"Type" 			: getCellValue(workSheetTSA,indexParts,typeTSAColumnIndex),
 							"ASIL" 			: getCellValue(workSheetTSA,indexParts,asilTSAColumnIndex),
 							"FM" 			: getCellValue(workSheetTSA,indexParts,failureModeTSAColumnIndex),
-							"SrcPart" 		: getCellValue(workSheetTSA,indexParts,sourcePartTSAColumnIndex),
+							"SrcPart" 		: getSourcePart(workSheetTSA,indexParts,sourcePartTSAColumnIndex), // getCellValue(workSheetTSA,indexParts,sourcePartTSAColumnIndex),
 							"Function" 		: getCellValue(workSheetTSA,indexParts,functionTSAColumnIndex),
 							"Task" 			: getCellValue(workSheetTSA,indexParts,taskTSAColumnIndex)
 						};
@@ -250,8 +263,23 @@ function main(){
 						mediniParts[partsMediniExit[indexPartsMediniExit].name] = partsMediniExit[indexPartsMediniExit];
 					}
 					// get the unique seq
-					var partsTSATotal = partsTSA.concat(partsSourceTSA);
-					var partsTSAUnique = partsTSATotal.filter(function(ele, idx, self){ return self.indexOf(ele) == idx;});
+					var partsTSACreate = partsTSA.filter(function(ele,idx,self) {
+						if (toJsStr(portPropertys[idx].Task).toLowerCase() === "create") {
+							return true;
+						} else {
+							return false;
+						}
+					});
+					var partsSourceTSA = partsSrcTSA.filter(function(ele,idx,self) {
+						if (toJsStr(portPropertys[idx].Task).toLowerCase() === "create") {
+							return true;
+						} else {
+							return false;
+						}
+					});
+					var partsSourceTSACreate = Array.prototype.concat.apply([], partsSourceTSA);
+					var partsTSATotal = partsTSACreate.concat(partsSourceTSACreate);
+					var partsTSAUnique = partsTSATotal.filter(function(ele, idx, self){ return self.indexOf(ele) === idx;});			
 					// create the part in medini
 					if (partsTSAUnique.length){
 						for (var indexPartsUnique = 0; indexPartsUnique < partsTSAUnique.length; indexPartsUnique++){
@@ -287,7 +315,7 @@ function main(){
 											// save the row num for create
 											rowNumForCreate.push(idx + 2);
 										}
-										console.log("modify");
+										// console.log("modify");
 										break;
 									case "delete":
 										{
