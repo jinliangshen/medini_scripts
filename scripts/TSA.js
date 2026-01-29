@@ -37,7 +37,7 @@ function toJsStr(javaStr) { return String(javaStr || '').trim(); }
 function getCellValue(workSheet,RowIndex,ColumnIndex){
 	
 	var row = workSheet.getRow(RowIndex);
-	if (row !== null && row != undefined) {
+	if (row !== null && row !== undefined) {
 		var cellRxCx = row.getCell(ColumnIndex);
 	} else {
 		cellRxCx = null;
